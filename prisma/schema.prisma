@@ -17,6 +17,7 @@ model User {
   username String @unique
   password String @unique
   message Message[]
+  receivedMessages Message[] @relation("ReceivedMessages")
 }
 
 
@@ -28,5 +29,9 @@ model Message {
   hour String
   authorId Int
   author User @relation(fields: [authorId], references: [id])
+  recipient User? @relation("ReceivedMessages", fields: [recipientId], references: [id])
+  recipientId Int?
 
 }
+
+

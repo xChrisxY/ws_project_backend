@@ -7,7 +7,21 @@ require('dotenv').config();
 const SECRET_KEY = process.env.SECRET_KEY
 const saltRounds = parseInt(process.env.SALT_ROUNDS_BCRYPT);
 
+const usuariosConectados = new Set();
+
+// let lastUserCreated = 0;
+
+// const lastUserCreatedFuncion = async () => {
+
+//       const users = await prisma.user.findMany();
+
+//       lastUserCreated = users[users.length - 1].id;
+
+// }
+
 const login = async (req, res) => {
+
+      console.log(req.body);
 
       try {
 
@@ -53,6 +67,7 @@ const login = async (req, res) => {
             res.status(200).json({
                   success: true,
                   message: 'user loggin succesfully',
+                  userId : user.id, 
                   token: token
             });
 
@@ -85,6 +100,9 @@ const createUser = async (req, res) => {
                   }
             })
 
+            // obtenemos esta variable para el long polling
+            lastUserCreated = newUser.id;
+
             const token = jwt.sign({ userId: newUser.id }, SECRET_KEY, { expiresIn: '1h' })
 
             return res.status(200).json({
@@ -112,6 +130,8 @@ const getUsers = async (req, res) => {
       try {
 
             const { id } = req.params;
+            
+            console.log(id)
 
             const users = await prisma.user.findMany();
             const filterUsers = users.filter(user => user.id !== parseInt(id));
@@ -131,11 +151,125 @@ const getUsers = async (req, res) => {
 
       }
 
+}
+
+const getUserById = async (req, res) => {
+
+      try {
+            
+            const { id } = req.params;
+
+            const user = await prisma.user.findFirst({
+
+                  where : {
+
+                        id : parseInt(id)
+
+                  }
+            });
+
+            console.log(user);
+
+            if (!user) {
+
+                  return res.status(401).json({
+                        success : false,
+                        message : 'User not found'
+                  });
+
+            } 
+
+            return res.status(200).json({
+                  success : true,
+                  message : 'User found',
+                  user : {
+                        id : user.id,
+                        username : user.username
+                  }
+            })
+
+      } catch (error) {
+
+            console.error(error);
+            res.status(200).json({
+                  success : false,
+                  message : 'Ha ocurrido un error'
+            });
+
+      }
 
 }
+
+const reviewNewConnections = (req, res) => {
+
+      const usuarios = Array.from(usuariosConectados)
+
+      res.status(200).json({
+            success : true,
+            usuariosConectados : usuarios
+      })
+
+}
+
+const removeConnections = (req, res) => {
+
+      try {
+            
+            const { id } = req.params;
+
+            console.log('Cliente desconectandose...');
+
+            if (usuariosConectados.has(parseInt(id))) {
+
+                  usuariosConectados.delete(parseInt(id));
+
+                  const usuarios = Array.from(usuariosConectados)
+
+                  return res.status(200).json({
+
+                        success : true,
+                        usuarios
+
+                  })
+
+            }
+
+            return res.status(200).json({
+
+                  success : true,
+                  message : 'User not found'
+
+            });
+
+      } catch (error) {
+
+            console.error("Ha ocurrido un error grave");
+            console.log(error);
+            
+      }
+
+}
+
+// const notifyUsers = async (req, res) => {
+
+//       try {
+            
+
+
+//       } catch (error) {
+            
+//             console.error(error);
+
+//       }
+
+// }
 
 module.exports = {
       login,
       createUser,
-      getUsers
+      getUsers,
+      getUserById,
+      reviewNewConnections,
+      usuariosConectados,
+      removeConnections
 }
